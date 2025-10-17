@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jadwal Booking Kendaraan</title>
+    <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+    <div class="container" style="max-width: 1400px;">
+        <div class="card">
+            <div class="header">
+                <a href="/form.html" class="nav-button">Buat Booking Baru</a>
+                <h1>Jadwal Penggunaan Kendaraan Operasional</h1>
+                <h1>Madrasah Istiqlal Jakarta</h1>
+                <div id="auth-container">
+                    <p id="userInfo">Memuat info pengguna...</p>
+                    <button id="loginBtn" class="button button-primary" style="display: none;">Login with Google</button>
+                    <button id="logoutBtn" class="button button-secondary" style="display: none;">Logout</button>
+                </div>
+            </div>
+
+            <div class="filters">
+                <label for="dateFilter">Tampilkan jadwal untuk tanggal:</label>
+                <input type="date" id="dateFilter">
+                <button id="resetFilterBtn" class="button button-secondary">Tampilkan Jadwal Mendatang</button>
+                <button id="downloadBtn" class="button button-primary" style="display: none; margin-left: auto;">Download Laporan</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tanggal Pakai & Jam</th>
+                            <th>Status</th>
+                            <th>Pemesan & Unit</th>
+                            <th>Tujuan</th>
+                            <th>Driver & Kendaraan</th>
+                            <th>Keterangan</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCXtf7aLTKNnblEjye06uuyvXShNPa_Vvs",
+            authDomain: "webapp-booking-kendaraan-c1561.firebaseapp.com",
+            projectId: "webapp-booking-kendaraan-c1561",
+            storageBucket: "webapp-booking-kendaraan-c1561.firebasestorage.app",
+            messagingSenderId: "153407551563",
+            appId: "1:153407551563:web:ade86de7ee59a4003bf5ce"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const API_URL = 'http://localhost:5000/api';
+
+        let currentUserProfile = null;
+        let initialData = {};
+        let unsubscribe;
+
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.getElementById('userInfo');
+        const dateFilter = document.getElementById('dateFilter');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const scheduleBody = document.getElementById('scheduleBody');
+
+        loginBtn.onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        logoutBtn.onclick = () => auth.signOut();
+        dateFilter.oninput = () => listenForScheduleUpdates();
+        resetFilterBtn.onclick = () => { dateFilter.value = ''; listenForScheduleUpdates(); };
+        downloadBtn.onclick = () => downloadReport();
+        
+        // Alur utama aplikasi dimulai di sini
+        document.addEventListener('DOMContentLoaded', async () => {
+            userInfo.textContent = 'Menghubungkan ke server...';
+            scheduleBody.innerHTML = '<tr><td colspan="7" class="loader">Menghubungkan...</td></tr>';
+
+            const isInitialDataLoaded = await loadInitialData();
+
+            if (isInitialDataLoaded) {
+                setupAuthListener();
+            } else {
+                userInfo.textContent = 'Gagal terhubung ke server.';
+                scheduleBody.innerHTML = '<tr><td colspan="7" class="no-data">Gagal memuat data. Pastikan server backend Anda sedang berjalan dan coba muat ulang halaman.</td></tr>';
+            }
+        });
+
+        async function loadInitialData() {
+            try {
+                const response = await fetch(`${API_URL}/initial-data`);
+                if (!response.ok) {
+                    throw new Error(`Server merespons dengan status: ${response.status}`);
+                }
+                initialData = await response.json();
+                return true;
+            } catch (e) { 
+                console.error("Tidak dapat memuat data awal", e);
+                return false;
+            }
+        }
+
+        function setupAuthListener() {
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    const token = await user.getIdToken(true);
+                    try {
+                        const response = await fetch(`${API_URL}/user-profile`, { headers: { 'Authorization': `Bearer ${token}` } });
+                        if (!response.ok) throw new Error('Gagal memuat profil pengguna.');
+                        currentUserProfile = await response.json();
+                        userInfo.textContent = `Login sebagai: ${currentUserProfile.email}`;
+                        loginBtn.style.display = 'none';
+                        logoutBtn.style.display = 'inline-block';
+                        downloadBtn.style.display = currentUserProfile.isAdmin ? 'inline-block' : 'none';
+                    } catch(e) {
+                        console.error(e);
+                        userInfo.textContent = 'Gagal memuat profil, silakan login ulang.';
+                        auth.signOut();
+                    }
+                } else {
+                    currentUserProfile = null;
+                    userInfo.textContent = 'Anda belum login.';
+                    loginBtn.style.display = 'inline-block';
+                    logoutBtn.style.display = 'none';
+                    downloadBtn.style.display = 'none';
+                }
+                listenForScheduleUpdates();
+            });
+        }
+
+        function listenForScheduleUpdates() {
+            if (unsubscribe) unsubscribe();
+
+            // REVISI: Menggunakan variabel 'scheduleBody' yang sudah didefinisikan
+            scheduleBody.innerHTML = '<tr><td colspan="7" class="loader">Memuat jadwal...</td></tr>';
+            
+            let query = db.collection('bookings');
+            const filterValue = dateFilter.value;
+
+            if (filterValue) {
+                const startOfDay = new Date(filterValue);
+                const endOfDay = new Date(filterValue);
+                endOfDay.setDate(endOfDay.getDate() + 1);
+                query = query.where('usageDate', '>=', startOfDay).where('usageDate', '<', endOfDay);
+            } else {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                query = query.where('usageDate', '>=', today);
+            }
+
+            unsubscribe = query.orderBy('usageDate', 'asc').orderBy('departureTime', 'asc').onSnapshot(snapshot => {
+                // REVISI: Menggunakan variabel 'scheduleBody' yang sudah didefinisikan
+                scheduleBody.innerHTML = '';
+                if (snapshot.empty) {
+                    scheduleBody.innerHTML = '<tr><td colspan="7" class="no-data">Tidak ada jadwal untuk kriteria ini.</td></tr>';
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const s = doc.data();
+                    const tr = document.createElement('tr');
+                    const statusClass = s.status.replace(/\s+/g, '-');
+                    
+                    let actionsHtml = '-';
+                    if (currentUserProfile?.isAdmin) {
+                        if (s.status === 'Pending') {
+                            actionsHtml = `
+                                <select id="driver-${s.submissionId}">${initialData.drivers.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}</select>
+                                <select id="vehicle-${s.submissionId}">${initialData.vehicles.map(v => `<option value="${v}">${v}</option>`).join('')}</select>
+                                <button onclick="assignBooking('${s.submissionId}')">Tugaskan</button>
+                            `;
+                        } else {
+                            actionsHtml = `
+                                <select id="status-${s.submissionId}">${initialData.statusList.map(st => `<option value="${st}" ${s.status === st ? 'selected' : ''}>${st}</option>`).join('')}</select>
+                                <button onclick="updateStatus('${s.submissionId}')">Update</button>
+                            `;
+                        }
+                    } else if (currentUserProfile?.isDriver) {
+                        const assignedDriverData = initialData.drivers.find(d => d.name === s.driver);
+                        if (assignedDriverData && assignedDriverData.email.includes(currentUserProfile.email)) {
+                            if (s.status === 'Ditugaskan') {
+                                 actionsHtml = `<button onclick="updateStatus('${s.submissionId}', 'Dalam Perjalanan')">Mulai Perjalanan</button> <button onclick="updateStatus('${s.submissionId}', 'Dibatalkan')">Batalkan</button>`;
+                            } else if (s.status === 'Dalam Perjalanan') {
+                                 actionsHtml = `<button onclick="updateStatus('${s.submissionId}', 'Selesai')">Selesaikan</button>`;
+                            }
+                        }
+                    }
+                    
+                    let notesHtml = s.keterangan || '';
+                    if (currentUserProfile?.isAdmin) {
+                        notesHtml += ` <button onclick="updateNotes('${s.submissionId}', '${s.keterangan || ''}')">Edit</button>`;
+                    }
+
+                    tr.innerHTML = `
+                        <td>${new Date(s.usageDate.seconds * 1000).toLocaleDateString('id-ID', {weekday: 'long', day: 'numeric', month: 'long'})}<br><span style="color: var(--text-secondary);">${s.departureTime}</span></td>
+                        <td><span class="status-chip status-${statusClass}">${s.status}</span></td>
+                        <td>${s.nama}<br><span style="color: var(--text-secondary);">${s.unit}</span></td>
+                        <td>${s.destination}</td>
+                        <td><strong>${s.driver || '-'}</strong><br><span style="color: var(--text-secondary);">${s.assignedVehicle || '-'}</span></td>
+                        <td class="notes-cell">${notesHtml}</td>
+                        <td class="actions">${actionsHtml}</td>
+                    `;
+                    // REVISI: Menggunakan variabel 'scheduleBody' yang sudah didefinisikan
+                    scheduleBody.appendChild(tr);
+                });
+            }, error => {
+                console.error("Firebase listener error:", error);
+                // REVISI: Menggunakan variabel 'scheduleBody' yang sudah didefinisikan
+                scheduleBody.innerHTML = '<tr><td colspan="7" class="no-data">Gagal memuat jadwal. Periksa index di Firebase.</td></tr>';
+            });
+        }
+        
+        async function updateNotes(submissionId, currentNotes) {
+            const newNotes = prompt("Masukkan keterangan baru:", currentNotes);
+            if (newNotes === null) return;
+
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const response = await fetch(`${API_URL}/bookings/${submissionId}/notes`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+                    body: JSON.stringify({ notes: newNotes })
+                });
+                if (!response.ok) throw new Error('Gagal update dari server.');
+            } catch (e) {
+                alert('Gagal mengupdate keterangan.');
+                console.error('Update notes failed:', e); 
+            }
+        }
+
+        async function assignBooking(submissionId) {
+            try {
+                const driver = document.getElementById(`driver-${submissionId}`).value;
+                const vehicle = document.getElementById(`vehicle-${submissionId}`).value;
+                const token = await auth.currentUser.getIdToken();
+                const response = await fetch(`${API_URL}/bookings/${submissionId}/assign`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+                    body: JSON.stringify({ driver, vehicle })
+                });
+                 if (!response.ok) throw new Error('Gagal menugaskan dari server.');
+            } catch (e) { 
+                alert('Gagal menugaskan booking.');
+                console.error('Assign booking failed:', e); 
+            }
+        }
+        
+        async function updateStatus(submissionId, status) {
+             try {
+                const newStatus = status || document.getElementById(`status-${submissionId}`).value;
+                const token = await auth.currentUser.getIdToken();
+                const response = await fetch(`${API_URL}/bookings/${submissionId}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+                    body: JSON.stringify({ status: newStatus })
+                });
+                 if (!response.ok) throw new Error('Gagal update dari server.');
+            } catch (e) {
+                alert('Gagal mengupdate status.');
+                console.error('Update status failed:', e); 
+            }
+        }
+
+        async function downloadReport() {
+            try {
+                const token = await auth.currentUser.getIdToken();
+                const response = await fetch(`${API_URL}/bookings/export`, {
+                    headers: { 'Authorization': `Bearer ${token}`}
+                });
+                if (!response.ok) throw new Error('Gagal mengunduh laporan dari server.');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Laporan_Booking_Kendaraan_${new Date().toISOString().slice(0,10)}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (e) {
+                alert('Gagal mengunduh laporan.');
+                console.error('Download report failed:', e);
+            }
+        }
+    </script>
+</body>
+</html>
+

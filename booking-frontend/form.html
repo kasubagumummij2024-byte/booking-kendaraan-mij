@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Booking Kendaraan</title>
+    <link rel="stylesheet" href="/public/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <a href="/schedule.html" class="nav-button">Lihat Jadwal</a>
+                <h1>Formulir Booking Kendaraan Operasional</h1>
+                <h1>Madrasah Istiqlal Jakarta</h1>
+                <p>Silakan isi semua data yang diperlukan dengan lengkap.</p>
+            </div>
+            
+            <form id="bookingForm" autocomplete="off">
+                <div class="form-grid">
+                    <div class="form-group"><label for="nama">Nama Lengkap Pemesan</label><input type="text" id="nama" name="nama" required></div>
+                    <div class="form-group"><label for="wa">No. WA (Format: 62...)</label><input type="tel" id="wa" name="wa" required pattern="^62\d{8,14}$"></div>
+                    <div class="form-group"><label for="unit">Satuan/Unit Kerja</label><select id="unit" name="unit" required></select></div>
+                    <div class="form-group"><label for="vehicle">Kendaraan yang Diminta</label><select id="vehicle" name="vehicle" required></select></div>
+                    <div class="form-group grid-col-span-2"><label for="purpose">Keperluan</label><textarea id="purpose" name="purpose" required></textarea></div>
+                    <div class="form-group grid-col-span-2"><label for="destination">Alamat Tujuan</label><input type="text" id="destination" name="destination" required placeholder="Cari di peta atau ketik manual"><div id="map"></div><input type="hidden" id="lat" name="lat"><input type="hidden" id="lng" name="lng"></div>
+                    <div class="form-group"><label for="dateFrom">Dari Tanggal</label><input type="date" id="dateFrom" name="dateFrom" required></div>
+                    <div class="form-group"><label for="dateTo">Sampai Tanggal (kosongkan jika 1 hari)</label><input type="date" id="dateTo" name="dateTo"></div>
+                    <div class="form-group"><label for="departureTime">Jam Keberangkatan (24 Jam)</label><input type="time" id="departureTime" name="departureTime" required></div>
+                    <div class="form-group"><label for="sifat">Sifat Penggunaan</label><select id="sifat" name="sifat" required></select></div>
+                    <div class="form-actions"><button type="submit" id="submitButton" class="button button-primary">Kirim Booking</button><button type="reset" class="button button-secondary">Reset Form</button></div>
+                </div>
+            </form>
+            <div id="statusMessage" class="status-message"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const form = document.getElementById('bookingForm');
+        const submitButton = document.getElementById('submitButton');
+        const statusMessage = document.getElementById('statusMessage');
+
+        const map = L.map('map').setView([-6.175, 106.828], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
+        let marker;
+        L.Control.geocoder({ defaultMarkGeocode: false, placeholder: 'Cari alamat...' }).on('markgeocode', e => {
+            const { center, name } = e.geocode;
+            if (marker) map.removeLayer(marker);
+            marker = L.marker(center).addTo(map).bindPopup(name).openPopup();
+            map.setView(center, 16);
+            updateFields(center.lat, center.lng, name);
+        }).addTo(map);
+        map.on('click', e => {
+            if (marker) map.removeLayer(marker);
+            marker = L.marker(e.latlng).addTo(map);
+            updateFields(e.latlng.lat, e.latlng.lng);
+        });
+        function updateFields(lat, lng, name = '') {
+            document.getElementById('lat').value = lat.toFixed(6);
+            document.getElementById('lng').value = lng.toFixed(6);
+            if (name) document.getElementById('destination').value = name;
+        }
+
+        async function populateDropdowns() {
+            try {
+                const response = await fetch(`${API_URL}/initial-data`);
+                if (!response.ok) throw new Error('Network error');
+                const data = await response.json();
+                const createOptions = (list, placeholder) => `<option value="" disabled selected>${placeholder}</option>` + list.map(item => `<option value="${item}">${item}</option>`).join('');
+                document.getElementById('unit').innerHTML = createOptions(data.units, 'Pilih Unit...');
+                document.getElementById('vehicle').innerHTML = createOptions(data.vehicles, 'Pilih Kendaraan...');
+                document.getElementById('sifat').innerHTML = createOptions(data.sifat, 'Pilih Sifat...');
+            } catch (e) {
+                showStatus('Gagal memuat data awal. Pastikan server backend berjalan.', 'error');
+            }
+        }
+        
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            submitButton.disabled = true;
+            submitButton.textContent = 'Mengirim...';
+            statusMessage.style.display = 'none';
+
+            const data = Object.fromEntries(new FormData(form).entries());
+
+            try {
+                const response = await fetch(`${API_URL}/bookings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message);
+                showStatus(result.message, 'success');
+                form.reset();
+                if (marker) map.removeLayer(marker);
+            } catch(error) {
+                showStatus(`Gagal: ${error.message || 'Error tidak diketahui'}`, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Kirim Booking';
+            }
+        });
+        
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.style.display = 'block';
+        }
+        
+        document.addEventListener('DOMContentLoaded', populateDropdowns);
+    </script>
+</body>
+</html>

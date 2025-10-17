@@ -1,0 +1,13 @@
+# Folder dependensi Node.js
+booking-backend/node_modules
+
+# File environment yang berisi kunci rahasia
+booking-backend/.env
+
+# File kunci rahasia Firebase
+booking-backend/serviceAccountKey.json
+
+# File log npm
+booking-backend/npm-debug.log*
+booking-backend/yarn-debug.log*
+booking-backend/yarn-error.log*

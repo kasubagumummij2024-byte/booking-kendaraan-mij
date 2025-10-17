@@ -1,0 +1,19 @@
+{
+  "name": "booking-backend",
+  "version": "1.0.0",
+  "description": "Backend for vehicle booking app",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "firebase-admin": "^11.11.0"
+  }
+}
