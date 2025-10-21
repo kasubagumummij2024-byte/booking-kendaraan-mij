@@ -1,45 +1,64 @@
-// --- REVISI UNTUK DEPLOYMENT ---
-const path = require('path');
+// === index.js (Versi Final: Backend + Frontend) ===
+
+const path = require('path'); // WAJIB: Tambahkan modul 'path'
 const isProduction = process.env.NODE_ENV === 'production';
 
 // HANYA jalankan dotenv jika di lokal (bukan produksi)
 if (!isProduction) {
-  // Kita perlu menunjuk path ke .env yang ada di folder root backend
-  require('dotenv').config({ path: path.resolve(__dirname, '../../.env') }); 
-  // CATATAN: Jika .env Anda ada di dalam /src, ubah path-nya. 
-  // Jika ada di /booking-backend (di luar /src), path: path.resolve(__dirname, '../.env')
+  // Path ini menunjuk ke .env di folder /booking-backend (satu level di atas /src)
+  require('dotenv').config({ path: path.resolve(__dirname, '../.env') }); 
 }
-// --- AKHIR REVISI ---
 
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 
+// --- Logika Kunci Firebase (Sudah Benar) ---
 let serviceAccount;
-
 if (isProduction) {
-    // Di Railway (produksi), baca kunci dari environment variable
-    // Pastikan nama variabel di Railway adalah FIREBASE_SERVICE_ACCOUNT
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 } else {
-    // Di komputer lokal, tetap baca dari file
-    // Path ini (../) sudah benar jika serviceAccountKey.json ada di /booking-backend
     serviceAccount = require('../serviceAccountKey.json');
 }
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
+// --- Akhir Logika Kunci ---
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const bookingRoutes = require('./routes/bookingRoutes');
-app.use('/api', bookingRoutes);
+// === DITAMBAHKAN: Bagian untuk Menyajikan Frontend ===
 
-// Railway akan menyediakan variabel PORT-nya sendiri
+// 1. Tentukan path ke folder 'public' milik frontend
+const publicPath = path.join(__dirname, '..', '..', 'booking-frontend', 'public');
+
+// 2. Gunakan 'publicPath' untuk menyajikan semua file statis (CSS, JS)
+app.use(express.static(publicPath));
+
+// 3. Buat route untuk halaman HTML Anda
+// (Saya asumsikan 'schedule.html' adalah halaman utama)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(publicPath, 'schedule.html'));
+});
+
+// Route untuk halaman form
+app.get('/form', (req, res) => {
+    res.sendFile(path.join(publicPath, 'form.html'));
+});
+
+// === AKHIR BAGIAN FRONTEND ===
+
+
+// --- API Routes Anda ---
+// (PENTING: letakkan SETELAH route frontend)
+const bookingRoutes = require('./routes/bookingRoutes');
+app.use('/api', bookingRoutes); // API Anda tetap di /api/...
+
+
+// --- Menjalankan Server ---
 const PORT = process.env.PORT || 5000; 
 app.listen(PORT, () => {
-    console.log(`✅ Server backend berjalan di port ${PORT}`);
+    console.log(`✅ Server (Backend + Frontend) berjalan di port ${PORT}`);
 });
