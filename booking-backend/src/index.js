@@ -37,7 +37,7 @@ console.log('publicPath (folder frontend internal):', publicPath);
 console.log('--- AKHIR DEBUGGING ---');
 
 // 2. Gunakan 'publicPath' untuk menyajikan semua file statis (CSS, JS)
-app.use(express.static(publicPath));
+app.use('/public',express.static(publicPath));
 
 // 3. Buat route untuk halaman HTML Anda
 app.get('/', (req, res) => {
