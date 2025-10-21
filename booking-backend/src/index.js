@@ -1,4 +1,4 @@
-// === index.js (Versi Final: Backend + Frontend + DEBUG) ===
+// === index.js (Versi Final - Strategi Baru) ===
 
 const path = require('path');
 const isProduction = process.env.NODE_ENV === 'production';
@@ -25,14 +25,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// === DITAMBAHKAN: Bagian untuk Menyajikan Frontend ===
+// === PERUBAHAN UTAMA DI SINI ===
 
-console.log('--- DEBUGGING PATH ---'); // BARIS DEBUG DITAMBAHKAN
-// 1. Tentukan path ke folder 'public' milik frontend
-const publicPath = path.resolve(__dirname, '..', '..', 'booking-frontend', 'public');
-console.log('__dirname (lokasi file index.js):', __dirname); // BARIS DEBUG DITAMBAHKAN
-console.log('publicPath (path ke folder frontend):', publicPath); // BARIS DEBUG DITAMBAHKAN
-console.log('--- AKHIR DEBUGGING ---'); // BARIS DEBUG DITAMBAHKAN
+// 1. Path sekarang menunjuk ke folder 'public' DI DALAM 'booking-backend'
+//    (Naik 1 level dari 'src', lalu masuk ke 'public')
+const publicPath = path.resolve(__dirname, '..', 'public');
+
+console.log('--- DEBUGGING PATH BARU ---');
+console.log('__dirname (lokasi file index.js):', __dirname);
+console.log('publicPath (folder frontend internal):', publicPath);
+console.log('--- AKHIR DEBUGGING ---');
 
 // 2. Gunakan 'publicPath' untuk menyajikan semua file statis (CSS, JS)
 app.use(express.static(publicPath));
@@ -42,11 +44,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(publicPath, 'schedule.html'));
 });
 
-// Route untuk halaman form
 app.get('/form', (req, res) => {
     res.sendFile(path.join(publicPath, 'form.html'));
 });
-// === AKHIR BAGIAN FRONTEND ===
+// === AKHIR PERUBAHAN ===
 
 const bookingRoutes = require('./routes/bookingRoutes');
 app.use('/api', bookingRoutes);
