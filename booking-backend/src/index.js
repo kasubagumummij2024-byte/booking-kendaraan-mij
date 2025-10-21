@@ -1,4 +1,4 @@
-// === index.js (Versi Final - Strategi Baru) ===
+// === index.js (Final & Lengkap) ===
 
 const path = require('path');
 const isProduction = process.env.NODE_ENV === 'production';
@@ -25,21 +25,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// === PERUBAHAN UTAMA DI SINI ===
+// --- BAGIAN PENTING UNTUK FRONTEND ---
 
-// 1. Path sekarang menunjuk ke folder 'public' DI DALAM 'booking-backend'
-//    (Naik 1 level dari 'src', lalu masuk ke 'public')
+// 1. Definisikan path ke folder 'public' fisik Anda
 const publicPath = path.resolve(__dirname, '..', 'public');
 
-console.log('--- DEBUGGING PATH BARU ---');
-console.log('__dirname (lokasi file index.js):', __dirname);
-console.log('publicPath (folder frontend internal):', publicPath);
-console.log('--- AKHIR DEBUGGING ---');
+// 2. SAJIKAN FILE STATIS (CSS, JS, GAMBAR)
+// Perintah ini: "Jika ada request ke URL yang diawali '/public', 
+// carikan filenya di dalam folder 'publicPath'."
+// Ini akan memperbaiki error 404 pada style.css
+app.use('/public', express.static(publicPath));
 
-// 2. Gunakan 'publicPath' untuk menyajikan semua file statis (CSS, JS)
-app.use('/public',express.static(publicPath));
-
-// 3. Buat route untuk halaman HTML Anda
+// 3. SAJIKAN HALAMAN HTML
+// Perintah ini menangani request ke halaman-halaman spesifik.
 app.get('/', (req, res) => {
     res.sendFile(path.join(publicPath, 'schedule.html'));
 });
@@ -47,8 +45,19 @@ app.get('/', (req, res) => {
 app.get('/form', (req, res) => {
     res.sendFile(path.join(publicPath, 'form.html'));
 });
-// === AKHIR PERUBAHAN ===
 
+// Tambahan untuk memastikan akses langsung ke file .html juga berfungsi
+app.get('/schedule.html', (req, res) => {
+    res.sendFile(path.join(publicPath, 'schedule.html'));
+});
+
+app.get('/form.html', (req, res) => {
+    res.sendFile(path.join(publicPath, 'form.html'));
+});
+
+// --- AKHIR BAGIAN FRONTEND ---
+
+// --- API Routes Anda (Tetap sama) ---
 const bookingRoutes = require('./routes/bookingRoutes');
 app.use('/api', bookingRoutes);
 
