@@ -40,7 +40,10 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:5000/api';
+        // === PERUBAHAN DI SINI ===
+        const API_URL = '/api'; // Menggunakan path relatif
+        // ========================
+
         const form = document.getElementById('bookingForm');
         const submitButton = document.getElementById('submitButton');
         const statusMessage = document.getElementById('statusMessage');

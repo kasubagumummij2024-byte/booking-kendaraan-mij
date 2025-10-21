@@ -62,7 +62,10 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-        const API_URL = 'http://localhost:5000/api';
+        
+        // === PERUBAHAN DI SINI ===
+        const API_URL = '/api'; // Menggunakan path relatif
+        // ========================
 
         let currentUserProfile = null;
         let initialData = {};
@@ -296,4 +299,3 @@
     </script>
 </body>
 </html>
-
