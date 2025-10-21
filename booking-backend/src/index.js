@@ -32,13 +32,13 @@ app.use(express.json());
 // === DITAMBAHKAN: Bagian untuk Menyajikan Frontend ===
 
 // 1. Tentukan path ke folder 'public' milik frontend
-const publicPath = path.join(__dirname, '..', '..', 'booking-frontend', 'public');
+//    Ini adalah perbaikan path yang lebih aman
+const publicPath = path.resolve(__dirname, '..', '..', 'booking-frontend', 'public');
 
 // 2. Gunakan 'publicPath' untuk menyajikan semua file statis (CSS, JS)
 app.use(express.static(publicPath));
 
 // 3. Buat route untuk halaman HTML Anda
-// (Saya asumsikan 'schedule.html' adalah halaman utama)
 app.get('/', (req, res) => {
     res.sendFile(path.join(publicPath, 'schedule.html'));
 });
@@ -52,7 +52,6 @@ app.get('/form', (req, res) => {
 
 
 // --- API Routes Anda ---
-// (PENTING: letakkan SETELAH route frontend)
 const bookingRoutes = require('./routes/bookingRoutes');
 app.use('/api', bookingRoutes); // API Anda tetap di /api/...
 
