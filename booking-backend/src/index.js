@@ -1,11 +1,9 @@
-// === index.js (Versi Final: Backend + Frontend) ===
+// === index.js (Versi Final: Backend + Frontend + DEBUG) ===
 
-const path = require('path'); // WAJIB: Tambahkan modul 'path'
+const path = require('path');
 const isProduction = process.env.NODE_ENV === 'production';
 
-// HANYA jalankan dotenv jika di lokal (bukan produksi)
 if (!isProduction) {
-  // Path ini menunjuk ke .env di folder /booking-backend (satu level di atas /src)
   require('dotenv').config({ path: path.resolve(__dirname, '../.env') }); 
 }
 
@@ -13,7 +11,6 @@ const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 
-// --- Logika Kunci Firebase (Sudah Benar) ---
 let serviceAccount;
 if (isProduction) {
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -23,7 +20,6 @@ if (isProduction) {
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
-// --- Akhir Logika Kunci ---
 
 const app = express();
 app.use(cors());
@@ -31,9 +27,12 @@ app.use(express.json());
 
 // === DITAMBAHKAN: Bagian untuk Menyajikan Frontend ===
 
+console.log('--- DEBUGGING PATH ---'); // BARIS DEBUG DITAMBAHKAN
 // 1. Tentukan path ke folder 'public' milik frontend
-//    Ini adalah perbaikan path yang lebih aman
 const publicPath = path.resolve(__dirname, '..', '..', 'booking-frontend', 'public');
+console.log('__dirname (lokasi file index.js):', __dirname); // BARIS DEBUG DITAMBAHKAN
+console.log('publicPath (path ke folder frontend):', publicPath); // BARIS DEBUG DITAMBAHKAN
+console.log('--- AKHIR DEBUGGING ---'); // BARIS DEBUG DITAMBAHKAN
 
 // 2. Gunakan 'publicPath' untuk menyajikan semua file statis (CSS, JS)
 app.use(express.static(publicPath));
@@ -47,16 +46,11 @@ app.get('/', (req, res) => {
 app.get('/form', (req, res) => {
     res.sendFile(path.join(publicPath, 'form.html'));
 });
-
 // === AKHIR BAGIAN FRONTEND ===
 
-
-// --- API Routes Anda ---
 const bookingRoutes = require('./routes/bookingRoutes');
-app.use('/api', bookingRoutes); // API Anda tetap di /api/...
+app.use('/api', bookingRoutes);
 
-
-// --- Menjalankan Server ---
 const PORT = process.env.PORT || 5000; 
 app.listen(PORT, () => {
     console.log(`✅ Server (Backend + Frontend) berjalan di port ${PORT}`);
