@@ -1,6 +1,0 @@
-{
-  "name": "booking-monorepo-root",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Root file untuk membantu Railway mendeteksi Node.js"
-}
