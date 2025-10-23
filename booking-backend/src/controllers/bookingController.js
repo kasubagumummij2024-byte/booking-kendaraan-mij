@@ -12,7 +12,7 @@ const DRIVERS = [
     { name: 'Bapak Taat dan Bapak Darjo', email: 'taatsulistyawati@gmail.com|sudarjomij@gmail.com|abramrafakumar@gmail.com'},
 ];
 
-const SIFAT = ['Ditunggu sampai selesai','Diantar saja, pulang sendiri','Diantar kemudian ditinggal setelah selesai minta dijemput'];
+const SIFAT = ['Bawa Sendiri','Ditunggu sampai selesai','Diantar saja, pulang sendiri','Diantar kemudian ditinggal setelah selesai minta dijemput'];
 const STATUS_LIST = ['Ditugaskan', 'Dalam Perjalanan', 'Selesai', 'Dibatalkan', 'Belum Bisa Diakomodir'];
 
 exports.getInitialData = (req, res) => {
