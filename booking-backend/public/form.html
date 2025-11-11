@@ -9,8 +9,78 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <!-- CSS KUSTOM UNTUK HEADER LOGO & EFEK -->
+    <style>
+        .site-header {
+            background-color: #FFFFFF; /* Sesuai dengan --bg-card */
+            border-bottom: 1px solid #DEE2E6; /* Sesuai dengan --border-color */
+            padding: 1rem 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .header-container {
+            max-width: 900px; /* Menyamai max-width container Anda */
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo-group-left img {
+            height: 50px; /* Ukuran logo utama */
+            width: auto;
+        }
+        .logo-group-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem; /* Jarak antar logo akreditasi */
+        }
+        .logo-group-right img {
+            height: 32px; /* Ukuran standar logo akreditasi */
+            width: auto;
+        }
+        .accreditation-logo {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+        .accreditation-logo:hover {
+            filter: grayscale(0%);
+            opacity: 1;
+        }
+        /* Sembunyikan logo akreditasi di layar kecil */
+        @media (max-width: 768px) {
+            .logo-group-right {
+                display: none;
+            }
+            .logo-group-left img {
+                height: 40px;
+            }
+        }
+    </style>
 </head>
 <body>
+
+    <!-- ===== BAGIAN HEADER LOGO BARU ===== -->
+    <header class="site-header">
+        <div class="header-container">
+            <!-- Logo Kiri: Utama -->
+            <div class="logo-group-left">
+                <img src="/images/logo-mij.png" alt="Logo MIJ" 
+                     onerror="this.src='https://placehold.co/150x50/f8fafc/0f172a?text=Logo+MIJ'; this.onerror=null;">
+            </div>
+            
+            <!-- Logo Kanan: Akreditasi -->
+            <div class="logo-group-right">
+                <img src="/images/logo-cambridge.png" alt="Cambridge" class="accreditation-logo" title="Cambridge International School">
+                <img src="/images/logo-iso.png" alt="ISO 9001" class="accreditation-logo" title="Quality Approved ISO 9001">
+                <img src="/images/logo-dgi.png" alt="DGI Cert" class="accreditation-logo" title="DGI Cert ISO 21001:2018">
+                <img src="/images/logo-jasanz.png" alt="JAS-ANZ" class="accreditation-logo" style="height: 28px;" title="JAS-ANZ">
+                <img src="/images/logo-iaf.png" alt="IAF" class="accreditation-logo" style="height: 28px;" title="International Accreditation Forum">
+            </div>
+        </div>
+    </header>
+    <!-- ===== AKHIR BAGIAN HEADER LOGO BARU ===== -->
+
     <div class="container">
         <div class="card">
             <div class="header">
